@@ -1,0 +1,9 @@
+version: "2"
+linters:
+  exclusions:
+    rules:
+      # best-effort cleanup and formatted output to a writer that cannot meaningfully fail
+      - linters: [errcheck]
+        text: "Close|Fprintf|Fprintln"
+      - linters: [errcheck]
+        path: _test\.go
