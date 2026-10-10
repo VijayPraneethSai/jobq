@@ -1,0 +1,30 @@
+## workers=2 sync=batch
+machine: 2 CPUs (GOMAXPROCS=2), linux/amd64, coordinator + workers + loadgen in one process, WAL sync=batch
+jobs=2000 workers=2 submitters=4 rate=0/s cmd=/bin/true
+submit phase 0.42s (4796 jobs/s), all finished after 2.64s -> 758 jobs/s end to end, failed=0
+submit->finish latency ms: p50=1147.8 p95=2038.9 p99=2187.4 max=2213.1
+## workers=2 sync=always
+machine: 2 CPUs (GOMAXPROCS=2), linux/amd64, coordinator + workers + loadgen in one process, WAL sync=always
+jobs=2000 workers=2 submitters=4 rate=0/s cmd=/bin/true
+submit phase 1.79s (1116 jobs/s), all finished after 5.29s -> 378 jobs/s end to end, failed=0
+submit->finish latency ms: p50=2268.8 p95=3378.7 p99=3472.0 max=3491.7
+## workers=8 sync=batch
+machine: 2 CPUs (GOMAXPROCS=2), linux/amd64, coordinator + workers + loadgen in one process, WAL sync=batch
+jobs=2000 workers=8 submitters=4 rate=0/s cmd=/bin/true
+submit phase 2.22s (903 jobs/s), all finished after 3.24s -> 618 jobs/s end to end, failed=0
+submit->finish latency ms: p50=633.4 p95=994.6 p99=1005.1 max=1015.7
+## workers=8 sync=always
+machine: 2 CPUs (GOMAXPROCS=2), linux/amd64, coordinator + workers + loadgen in one process, WAL sync=always
+jobs=2000 workers=8 submitters=4 rate=0/s cmd=/bin/true
+submit phase 3.43s (583 jobs/s), all finished after 3.90s -> 513 jobs/s end to end, failed=0
+submit->finish latency ms: p50=363.4 p95=479.0 p99=488.2 max=496.0
+## workers=32 sync=batch
+machine: 2 CPUs (GOMAXPROCS=2), linux/amd64, coordinator + workers + loadgen in one process, WAL sync=batch
+jobs=2000 workers=32 submitters=4 rate=0/s cmd=/bin/true
+submit phase 3.86s (518 jobs/s), all finished after 3.87s -> 516 jobs/s end to end, failed=0
+submit->finish latency ms: p50=11.0 p95=22.3 p99=39.5 max=45.5
+## workers=32 sync=always
+machine: 2 CPUs (GOMAXPROCS=2), linux/amd64, coordinator + workers + loadgen in one process, WAL sync=always
+jobs=2000 workers=32 submitters=4 rate=0/s cmd=/bin/true
+submit phase 6.05s (331 jobs/s), all finished after 6.06s -> 330 jobs/s end to end, failed=0
+submit->finish latency ms: p50=17.1 p95=27.5 p99=33.4 max=42.0
