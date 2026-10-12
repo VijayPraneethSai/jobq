@@ -16,3 +16,39 @@ jobs:
           go vet ./...
       - name: tests (race detector, repeated)
         run: go test -race -count=3 ./...
+
+  deploy-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: validate compose file
+        run: docker compose config --quiet
+      - name: validate Prometheus config and alert rules
+        run: |
+          docker run --rm --entrypoint promtool -v "$PWD/deploy/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v2.55.1 check config /etc/prometheus/prometheus.yml
+      - name: validate Grafana dashboard JSON
+        run: jq empty deploy/grafana/dashboards/jobq.json
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: build coordinator image
+        run: docker build --target coordinator -t jobq-coordinator .
+      - name: build worker image
+        run: docker build --target worker -t jobq-worker .
+      - name: smoke test the stack
+        run: |
+          docker compose up -d --build --scale worker=2 coordinator worker
+          for i in $(seq 1 30); do
+            curl -fs localhost:8080/readyz && break || sleep 2
+          done
+          curl -fs -XPOST localhost:8080/jobs -d '{"key":"ci-1","command":"echo","args":["hi"],"max_retries":0}'
+          for i in $(seq 1 30); do
+            curl -fs localhost:8080/metrics | grep -q '^jobq_jobs{state="succeeded"} 1' && exit 0 || sleep 1
+          done
+          docker compose logs
+          exit 1

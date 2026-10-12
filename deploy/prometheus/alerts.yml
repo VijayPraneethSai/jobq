@@ -1,0 +1,63 @@
+groups:
+  - name: jobq
+    rules:
+      - alert: JobqCoordinatorDown
+        expr: up{job="jobq-coordinator"} == 0
+        for: 30s
+        labels: {severity: page}
+        annotations:
+          summary: "jobq coordinator is not answering scrapes"
+          runbook: "docs/RUNBOOK.md#coordinator-down-or-restarting"
+
+      - alert: JobqHighLeaseExpiryRate
+        # Workers are dying, stalling or cannot reach the coordinator. Normal is ~0.
+        expr: rate(jobq_lease_expirations_total[5m]) > 0.05
+        for: 5m
+        labels: {severity: ticket}
+        annotations:
+          summary: "Leases are expiring ({{ $value | humanize }}/s): workers are crashing or stalled"
+          runbook: "docs/RUNBOOK.md#lease-expiries-rising"
+
+      - alert: JobqDeadLetterGrowing
+        expr: delta(jobq_jobs{state="dead"}[15m]) > 0
+        labels: {severity: ticket}
+        annotations:
+          summary: "Jobs are landing in the dead-letter state"
+          runbook: "docs/RUNBOOK.md#jobs-in-the-dead-letter-state"
+
+      - alert: JobqBacklogNotDraining
+        # Runnable jobs waiting while nothing is running means no worker is pulling.
+        expr: jobq_jobs{state="queued"} > 0 and jobq_jobs{state="running"} == 0
+        for: 2m
+        labels: {severity: page}
+        annotations:
+          summary: "Jobs are queued but nothing is running: no healthy workers"
+          runbook: "docs/RUNBOOK.md#backlog-not-draining"
+
+      - alert: JobqServerErrors
+        expr: |
+          sum(rate(jobq_http_requests_total{class="5xx"}[5m]))
+            / sum(rate(jobq_http_requests_total[5m])) > 0.01
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: "More than 1% of coordinator requests are failing with 5xx"
+          runbook: "docs/RUNBOOK.md#http-5xx-errors"
+
+      - alert: JobqLatencyP99High
+        # SLO: 99% of jobs succeed within 60 s of submit (see docs/SLO.md). Buckets exist at 60 and 300.
+        expr: |
+          histogram_quantile(0.99, sum by (le) (rate(jobq_job_latency_seconds_bucket[10m]))) > 60
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "p99 submit-to-success latency is above 60 s"
+          runbook: "docs/RUNBOOK.md#latency-slo-breach"
+
+      - alert: JobqWALLarge
+        expr: jobq_wal_bytes > 128 * 1024 * 1024
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: "WAL is over 128 MiB: compaction (default 64 MiB) is not keeping up"
+          runbook: "docs/RUNBOOK.md#wal-keeps-growing"

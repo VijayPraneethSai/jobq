@@ -32,6 +32,23 @@ Set `JOBQ_TOKEN` (or `-token`) on the coordinator, workers and CLI to require a 
 API: `POST /jobs`, `GET /jobs/{id}`, `GET /jobs?state=&limit=`, `POST /lease`, `POST /jobs/{id}/heartbeat`,
 `POST /jobs/{id}/complete`.
 
+## Run it with Docker Compose
+
+```
+docker compose up --build --scale worker=3
+```
+
+Starts a coordinator (distroless image, WAL on a named volume), three workers (Alpine image, so `sh -c ...` jobs work),
+Prometheus with alert rules, and Grafana with a provisioned "jobq overview" dashboard at http://localhost:3000.
+The API is on `localhost:8080`. The worker image runs with `-allow echo,sh,sleep,true,false`; change it in
+`docker-compose.yml` for real use.
+
+## Operations
+
+* Dashboard and alerts: `deploy/grafana/dashboards/jobq.json`, `deploy/prometheus/alerts.yml` (7 rules).
+* Objectives and error budget: [docs/SLO.md](docs/SLO.md).
+* What to do when an alert fires: [docs/RUNBOOK.md](docs/RUNBOOK.md), including a worker-crash drill.
+
 ## Tests
 
 ```
@@ -58,8 +75,10 @@ I broke the lease-token check on purpose to confirm these catch it (three tests 
 server is exercised through the end-to-end tests).
 
 Ran here: `go vet`, `gofmt`, `golangci-lint` (0 issues, config in `.golangci.yml`), `go test -race -count=8` on the
-end-to-end package. Not run here: the GitHub Actions workflow and the Dockerfile (no Actions runner and no Docker
-daemon where this was built), so treat both as untested.
+end-to-end package. `promtool check rules` and `check config` pass on the Prometheus files, and every metric name used
+by the alerts and the dashboard was checked against a live coordinator's `/metrics`. Not run here: the Docker images,
+the Compose stack, the Grafana dashboard rendering, and the GitHub Actions workflow (no Docker daemon or Actions runner
+where this was built), so treat those as untested until the CI run is green.
 
 ## Load numbers
 
